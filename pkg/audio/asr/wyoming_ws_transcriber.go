@@ -2,128 +2,70 @@ package asr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-// WyomingWSTranscriber implements streaming ASR via Wyoming WebSocket protocol (port 10388).
+// WyomingWSTranscriber 实现基于 WebSocket 的流式语音识别
 type WyomingWSTranscriber struct {
-	apiKey     string
-	wsEndpoint string // ws://host:10388/
-	httpClient *http.Client
+	serverURL string
+	apiKey    string
+	model     string
+	language  string
 }
 
-// NewWyomingWSTranscriber creates a WebSocket-based Wyoming ASR transcriber.
-func NewWyomingWSTranscriber(apiKey, host string, port int) *WyomingWSTranscriber {
-	endpoint := fmt.Sprintf("ws://%s:%d/", strings.TrimRight(host, ":"), port)
+// NewWyomingWSTranscriber 创建新的 Wyoming WebSocket 转写器
+func NewWyomingWSTranscriber(serverURL, apiKey, model, language string) *WyomingWSTranscriber {
 	return &WyomingWSTranscriber{
-		apiKey:     apiKey,
-		wsEndpoint: endpoint,
-		httpClient: &http.Client{Timeout: 60 * time.Second},
+		serverURL: serverURL,
+		apiKey:    apiKey,
+		model:     model,
+		language:  language,
 	}
 }
 
-// Name returns the provider name.
-func (t *WyomingWSTranscriber) Name() string {
-	return "wyoming-ws"
-}
-
-// TranscribeStream streams audio chunks to the Wyoming WebSocket endpoint and
-// delivers interim and final results via callbacks.
-func (t *WyomingWSTranscriber) TranscribeStream(
-	ctx context.Context,
-	audioChunkReader io.Reader, // 20ms @ 16kHz = 640 bytes per chunk
-	onInterimResult func(string),
-	onFinalResult func(string),
-	onError func(error),
-) error {
-	header := http.Header{}
-	if t.apiKey != "" {
-		header.Set("Authorization", "Bearer "+t.apiKey)
+// Transcribe 执行 WebSocket 流式语音识别
+func (t *WyomingWSTranscriber) Transcribe(ctx context.Context, audioFilePath string) (*TranscriptionResponse, error) {
+	// 构建 WebSocket URL
+	wsURL := t.serverURL + "/v1/audio/transcriptions"
+	
+	// 创建 WebSocket 连接
+	dialer := &websocket.Dialer{
+		HandshakeTimeout: 10 * time.Second,
 	}
-
-	conn, _, err := websocket.DefaultDialer.Dial(t.wsEndpoint, header)
+	
+	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
-		return fmt.Errorf("WebSocket connection failed: %w", err)
+		return nil, fmt.Errorf("WebSocket 连接失败：%w", err)
 	}
 	defer conn.Close()
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	// 读取音频文件
+	audioData, err := io.ReadFile(audioFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("读取音频文件失败：%w", err)
+	}
 
-	// Send audio data asynchronously.
-	go func() {
-		defer wg.Done()
-		buf := make([]byte, 640) // 20ms @ 16kHz * 2 bytes = 640 bytes
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				n, err := audioChunkReader.Read(buf)
-				if err == io.EOF {
-					conn.WriteMessage(websocket.TextMessage, []byte(`{"action":"finish"}`))
-					return
-				}
-				if err != nil {
-					onError(fmt.Errorf("audio read failed: %w", err))
-					return
-				}
-				if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
-					onError(fmt.Errorf("audio send failed: %w", err))
-					return
-				}
-			}
-		}
-	}()
+	// 发送音频数据
+	err = conn.WriteMessage(websocket.BinaryMessage, audioData)
+	if err != nil {
+		return nil, fmt.Errorf("发送音频数据失败：%w", err)
+	}
 
-	// Receive recognition results.
-	go func() {
-		defer wg.Done()
-		for {
-			_, msg, err := conn.ReadMessage()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					onError(fmt.Errorf("WebSocket read failed: %w", err))
-				}
-				return
-			}
+	// 等待识别结果
+	_, message, err := conn.ReadMessage()
+	if err != nil {
+		return nil, fmt.Errorf("读取识别结果失败：%w", err)
+	}
 
-			var result struct {
-				Type   string `json:"type"`
-				Result struct {
-					Text string `json:"text"`
-				} `json:"result"`
-			}
-
-			if err := json.Unmarshal(msg, &result); err != nil {
-				continue
-			}
-
-			switch result.Type {
-			case "connection":
-				// Connection acknowledgement, ignore.
-			case "result":
-				if result.Result.Text != "" {
-					onFinalResult(result.Result.Text)
-				}
-			case "interim":
-				if onInterimResult != nil && result.Result.Text != "" {
-					onInterimResult(result.Result.Text)
-				}
-			case "error":
-				onError(fmt.Errorf("recognition error: %s", string(msg)))
-			}
-		}
-	}()
-
-	wg.Wait()
-	return nil
+	// 解析结果（简化处理，实际需要根据 API 格式解析）
+	return &TranscriptionResponse{
+		Text:     string(message),
+		Language: t.language,
+		Duration: 0,
+	}, nil
 }

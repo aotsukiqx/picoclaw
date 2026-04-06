@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// Gemma4Provider 实现 Gemma4 E4B 模型 Provider
 type Gemma4Provider struct {
 	apiBase   string
 	apiKey    string
@@ -18,6 +19,7 @@ type Gemma4Provider struct {
 	httpClient *http.Client
 }
 
+// NewGemma4Provider 创建新的 Gemma4 Provider
 func NewGemma4Provider(apiBase, apiKey, model string, maxTokens int) *Gemma4Provider {
 	if maxTokens <= 0 {
 		maxTokens = 8192
@@ -31,8 +33,10 @@ func NewGemma4Provider(apiBase, apiKey, model string, maxTokens int) *Gemma4Prov
 	}
 }
 
+// Name 返回 Provider 名称
 func (p *Gemma4Provider) Name() string { return "gemma4" }
 
+// Complete 执行同步对话补全
 func (p *Gemma4Provider) Complete(ctx context.Context, prompt string) (string, error) {
 	url := p.apiBase + "/v1/chat/completions"
 	
@@ -85,6 +89,7 @@ func (p *Gemma4Provider) Complete(ctx context.Context, prompt string) (string, e
 	return result.Choices[0].Message.Content, nil
 }
 
+// StreamComplete 执行流式对话补全
 func (p *Gemma4Provider) StreamComplete(ctx context.Context, prompt string, onChunk func(string)) error {
 	url := p.apiBase + "/v1/chat/completions"
 	

@@ -1,90 +1,74 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export interface AppConfig {
   voice: {
-    enabled: boolean
-    asrServer: string
-    asrModel: string
-  }
+    enabled: boolean;
+    asrServer: string;
+    asrModel: string;
+  };
   vision: {
-    enabled: boolean
-    captureMode: "photo" | "video_3s"
-  }
-  gemma4ApiKey: string
-  gemma4Model: string
+    enabled: boolean;
+    captureMode: 'photo' | 'video_3s';
+  };
+  gemma4ApiKey: string;
+  gemma4Model: string;
 }
 
 const defaultConfig: AppConfig = {
   voice: {
     enabled: true,
-    asrServer: "ws://localhost:10388",
-    asrModel: "whisper-v3",
+    asrServer: 'ws://localhost:10388',
+    asrModel: 'whisper-v3',
   },
   vision: {
     enabled: true,
-    captureMode: "photo",
+    captureMode: 'photo',
   },
-  gemma4ApiKey: "",
-  gemma4Model: "google/gemma-4-E4B-it",
-}
+  gemma4ApiKey: '',
+  gemma4Model: 'google/gemma-4-E4B-it',
+};
 
 interface ConfigContextValue {
-  config: AppConfig
-  updateConfig: (patch: Partial<AppConfig>) => Promise<void>
-  isLoading: boolean
+  config: AppConfig;
+  updateConfig: (patch: Partial<AppConfig>) => Promise<void>;
+  isLoading: boolean;
 }
 
-const ConfigContext = createContext<ConfigContextValue | null>(null)
-
-const STORAGE_KEY = "picoclaw_config"
+const ConfigContext = createContext<ConfigContextValue | null>(null);
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
-  const [config, setConfig] = useState<AppConfig>(defaultConfig)
-  const [isLoading, setIsLoading] = useState(true)
+  const [config, setConfig] = useState<AppConfig>(defaultConfig);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadConfig = async () => {
+    const stored = localStorage.getItem('@picoclaw_config');
+    if (stored) {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          setConfig({ ...defaultConfig, ...parsed })
-        }
-      } catch (err) {
-        console.error("Failed to load config:", err)
-      } finally {
-        setIsLoading(false)
+        setConfig({ ...defaultConfig, ...JSON.parse(stored) });
+      } catch {
+        setConfig(defaultConfig);
       }
     }
+    setIsLoading(false);
+  }, []);
 
-    void loadConfig()
-  }, [])
-
-  const updateConfig = useCallback(
-    async (patch: Partial<AppConfig>) => {
-      const updated = { ...config, ...patch }
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-        setConfig(updated)
-      } catch (err) {
-        console.error("Failed to save config:", err)
-        throw err
-      }
-    },
-    [config]
-  )
+  const updateConfig = useCallback(async (patch: Partial<AppConfig>) => {
+    const updated = { ...config, ...patch };
+    await localStorage.setItem('@picoclaw_config', JSON.stringify(updated));
+    setConfig(updated);
+  }, [config]);
 
   return (
     <ConfigContext.Provider value={{ config, updateConfig, isLoading }}>
       {children}
     </ConfigContext.Provider>
-  )
+  );
 }
 
 export function useConfig() {
-  const context = useContext(ConfigContext)
+  const context = useContext(ConfigContext);
   if (!context) {
-    throw new Error("useConfig must be used within ConfigProvider")
+    throw new Error('useConfig must be used within ConfigProvider');
   }
-  return context
+  return context;
 }

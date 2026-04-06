@@ -1,4 +1,3 @@
-// components/CaptureButton.tsx
 import React from 'react';
 
 interface CaptureButtonProps {
@@ -8,12 +7,39 @@ interface CaptureButtonProps {
 }
 
 export function CaptureButton({ onPhoto, onVideo, disabled = false }: CaptureButtonProps) {
+  const buttonBaseStyle: React.CSSProperties = {
+    flex: 1,
+    padding: '12px 24px',
+    borderRadius: '0.5rem',
+    fontWeight: 500,
+    transition: 'background-color 0.2s',
+    border: 'none',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+  };
+
+  const photoButtonStyle: React.CSSProperties = {
+    ...buttonBaseStyle,
+    backgroundColor: disabled ? '#9CA3AF' : '#7C3AED',
+    color: 'white',
+  };
+
+  const videoButtonStyle: React.CSSProperties = {
+    ...buttonBaseStyle,
+    backgroundColor: disabled ? '#9CA3AF' : '#DC2626',
+    color: 'white',
+  };
+
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    gap: '12px',
+  };
+
   return (
-    <div className="flex gap-3">
+    <div style={containerStyle}>
       <button
         onClick={onPhoto}
         disabled={disabled}
-        className="flex-1 py-3 px-6 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+        style={photoButtonStyle}
         title="拍照"
       >
         📷 拍照
@@ -21,7 +47,7 @@ export function CaptureButton({ onPhoto, onVideo, disabled = false }: CaptureBut
       <button
         onClick={onVideo}
         disabled={disabled}
-        className="flex-1 py-3 px-6 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+        style={videoButtonStyle}
         title="录制3秒视频"
       >
         🎬 3秒视频

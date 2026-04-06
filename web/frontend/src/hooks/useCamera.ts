@@ -1,9 +1,7 @@
-// hooks/useCamera.ts
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 export interface UseCameraOptions {
   facingMode?: 'user' | 'environment';
-  videoEnabled?: boolean;
 }
 
 export function useCamera(options: UseCameraOptions = {}) {
@@ -12,10 +10,10 @@ export function useCamera(options: UseCameraOptions = {}) {
   const [error, setError] = useState<Error | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const startCamera = useCallback(async (opts?: UseCameraOptions) => {
+  const startCamera = useCallback(async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: opts?.facingMode || 'user', width: 1280, height: 720 },
+        video: { facingMode: options.facingMode || 'user', width: 1280, height: 720 },
         audio: false,
       });
       setStream(mediaStream);
@@ -28,7 +26,7 @@ export function useCamera(options: UseCameraOptions = {}) {
       setError(err as Error);
       return null;
     }
-  }, []);
+  }, [options.facingMode]);
 
   const stopCamera = useCallback(() => {
     if (stream) {
@@ -65,7 +63,7 @@ export function useCamera(options: UseCameraOptions = {}) {
 
   useEffect(() => {
     return () => { stopCamera(); };
-  }, []);
+  }, [stopCamera]);
 
   return {
     videoRef,
