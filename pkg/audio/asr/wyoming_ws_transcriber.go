@@ -3,8 +3,7 @@ package asr
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -45,7 +44,7 @@ func (t *WyomingWSTranscriber) Transcribe(ctx context.Context, audioFilePath str
 	defer conn.Close()
 
 	// 读取音频文件
-	audioData, err := io.ReadFile(audioFilePath)
+	audioData, err := os.ReadFile(audioFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("读取音频文件失败：%w", err)
 	}

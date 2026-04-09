@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -33,7 +34,7 @@ func NewWyomingHTTPTranscriber(serverURL, apiKey, model, language string) *Wyomi
 // Transcribe 执行 HTTP 异步语音识别
 func (t *WyomingHTTPTranscriber) Transcribe(ctx context.Context, audioFilePath string) (*TranscriptionResponse, error) {
 	// 读取音频文件
-	audioData, err := io.ReadFile(audioFilePath)
+	audioData, err := os.ReadFile(audioFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("读取音频文件失败：%w", err)
 	}
