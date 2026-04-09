@@ -1,4 +1,10 @@
-import { IconArrowUp, IconPhotoPlus, IconX } from "@tabler/icons-react"
+import {
+  IconArrowUp,
+  IconMicrophone,
+  IconPhotoPlus,
+  IconPlayerStopFilled,
+  IconX,
+} from "@tabler/icons-react"
 import type { KeyboardEvent } from "react"
 import { useTranslation } from "react-i18next"
 import TextareaAutosize from "react-textarea-autosize"
@@ -13,6 +19,9 @@ interface ChatComposerProps {
   onInputChange: (value: string) => void
   onAddImages: () => void
   onRemoveAttachment: (index: number) => void
+  onMicDown: () => void
+  onMicUp: () => void
+  isRecording: boolean
   onSend: () => void
   isConnected: boolean
   hasDefaultModel: boolean
@@ -25,6 +34,9 @@ export function ChatComposer({
   onInputChange,
   onAddImages,
   onRemoveAttachment,
+  onMicDown,
+  onMicUp,
+  isRecording,
   onSend,
   isConnected,
   hasDefaultModel,
@@ -86,6 +98,28 @@ export function ChatComposer({
 
         <div className="mt-2 flex items-center justify-between px-1">
           <div className="flex items-center gap-1">
+            {/* Press-and-hold microphone button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 rounded-full ${isRecording ? "bg-red-500/20 text-red-500 hover:text-red-500 animate-pulse" : "text-muted-foreground hover:text-foreground"}`}
+              onMouseDown={onMicDown}
+              onMouseUp={onMicUp}
+              onMouseLeave={isRecording ? onMicUp : undefined}
+              onTouchStart={onMicDown}
+              onTouchEnd={onMicUp}
+              disabled={!canInput && !isRecording}
+              aria-label={isRecording ? t("chat.recording") : t("chat.holdToRecord")}
+              title={isRecording ? t("chat.releaseToSend") : t("chat.holdToRecord")}
+            >
+              {isRecording ? (
+                <IconPlayerStopFilled className="size-4 text-red-500" />
+              ) : (
+                <IconMicrophone className="size-4" />
+              )}
+            </Button>
+
             <Button
               type="button"
               variant="ghost"

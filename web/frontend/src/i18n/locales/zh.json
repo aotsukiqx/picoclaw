@@ -58,6 +58,10 @@
     "attachImage": "添加图片",
     "removeImage": "移除图片",
     "uploadedImage": "已上传图片",
+    "holdToRecord": "按住说话",
+    "releaseToSend": "松开发送",
+    "recording": "录音中..."
+    ,
     "invalidImage": "“{{name}}”不是支持的图片文件。",
     "imageTooLarge": "“{{name}}”超过了 {{size}} 限制。",
     "imageReadFailed": "读取“{{name}}”失败。",

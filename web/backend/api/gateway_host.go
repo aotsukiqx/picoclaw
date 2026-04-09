@@ -90,7 +90,8 @@ func requestWSScheme(r *http.Request) string {
 		return "wss"
 	}
 
-	return "ws"
+	// 默认返回 wss（适用于 HTTPS 代理场景）
+	return "wss"
 }
 
 // requestHTTPScheme returns http or https for URLs that are not WebSockets (e.g. SSE).

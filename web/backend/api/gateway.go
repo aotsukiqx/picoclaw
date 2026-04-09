@@ -1107,9 +1107,8 @@ func (h *Handler) gatewayStatusData() map[string]any {
 		data["pid"] = pidData.PID
 		gateway.mu.Unlock()
 	} else {
-		// Intentionally skip health probe here; the startup goroutine
-		// (startGatewayLocked) already handles liveness detection via
-		// pidFile polling and health fallback.
+		// Don't clear gateway.pidData on read failure - it may be transient.
+		// Only use gatewayStatusWithoutHealthLocked for the status.
 		gateway.mu.Lock()
 		status := gatewayStatusWithoutHealthLocked()
 		data["gateway_status"] = status

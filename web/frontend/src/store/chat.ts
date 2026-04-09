@@ -6,9 +6,11 @@ import {
 } from "@/features/chat/state"
 
 export interface ChatAttachment {
-  type: "image"
+  id?: string
+  type: string  // "image", "audio", "audio/webm", etc.
   url: string
   filename?: string
+  base64?: string
 }
 
 export interface ChatMessage {

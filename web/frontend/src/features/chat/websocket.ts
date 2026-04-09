@@ -11,6 +11,15 @@ export function normalizeWsUrlForBrowser(wsUrl: string): string {
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1"
 
+    // 关键修复：根据当前页面协议自动调整 WebSocket 协议
+    // HTTPS 页面必须用 wss://，HTTP 页面用 ws://
+    const isPageSecure = window.location.protocol === "https:"
+    if (isPageSecure && parsedUrl.protocol === "ws:") {
+      parsedUrl.protocol = "wss:"
+    } else if (!isPageSecure && parsedUrl.protocol === "wss:") {
+      parsedUrl.protocol = "ws:"
+    }
+
     if (isLocalHost && !isBrowserLocal) {
       parsedUrl.hostname = window.location.hostname
       finalWsUrl = parsedUrl.toString()

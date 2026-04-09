@@ -150,8 +150,9 @@ export async function connectChat() {
       return
     }
 
-    const wsScheme = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const wsUrl = `${wsScheme}//${window.location.host}/pico/ws`
+    // Use window.location to construct WebSocket URL directly (not from backend)
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = wsProtocol + '//' + window.location.host + '/pico/ws'
     const url = `${wsUrl}?session_id=${encodeURIComponent(sessionId)}`
     const socket = new WebSocket(url, [`token.${token}`])
 
@@ -344,7 +345,7 @@ export function sendChatMessage({
 
   const normalizedContent = content.trim()
   const normalizedAttachments = attachments
-    .filter((attachment) => attachment.type === "image" && attachment.url)
+    .filter((attachment) => attachment.url)
     .map((attachment) => ({ ...attachment }))
 
   if (!normalizedContent && normalizedAttachments.length === 0) {

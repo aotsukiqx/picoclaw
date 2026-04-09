@@ -1,5 +1,5 @@
 import { IconPlus } from "@tabler/icons-react"
-import { type ChangeEvent, useEffect, useRef, useState } from "react"
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
@@ -16,6 +16,7 @@ import { useChatModels } from "@/hooks/use-chat-models"
 import { useGateway } from "@/hooks/use-gateway"
 import { usePicoChat } from "@/hooks/use-pico-chat"
 import { useSessionHistory } from "@/hooks/use-session-history"
+import { useRecorder } from "@/hooks/useRecorder"
 import type { ChatAttachment } from "@/store/chat"
 
 const MAX_IMAGE_SIZE_BYTES = 7 * 1024 * 1024
@@ -77,6 +78,9 @@ export function ChatPage() {
   } = useChatModels({ isConnected: isGatewayRunning })
   const canSend = isChatConnected && Boolean(defaultModelName)
 
+  // Voice recording - press and hold to record, release to send
+  const { isRecording, startRecording, stopRecording } = useRecorder()
+
   const {
     sessions,
     hasMore,
@@ -111,6 +115,7 @@ export function ChatPage() {
 
   const handleSend = () => {
     if ((!input.trim() && attachments.length === 0) || !canSend) return
+
     if (
       sendMessage({
         content: input,
@@ -121,6 +126,51 @@ export function ChatPage() {
       setAttachments([])
     }
   }
+
+  const handleMicDown = useCallback(async () => {
+    if (isRecording) return
+    try {
+      await startRecording()
+    } catch (error) {
+      const err = error as Error
+      let message = "录音失败："
+      
+      if (err.name === "NotAllowedError") {
+        message += "麦克风权限被拒绝。请点击地址栏锁图标，允许麦克风权限后重试。"
+      } else if (err.name === "NotFoundError") {
+        message += "未找到麦克风设备。请检查系统音频设置。"
+      } else if (err.name === "NotReadableError") {
+        message += "麦克风被其他应用占用。请关闭其他录音应用后重试。"
+      } else if (location.protocol !== "https:" && location.hostname !== "localhost") {
+        message += "非 HTTPS 环境无法录音。请使用 HTTPS 或 localhost 访问。"
+      } else {
+        message += err.message || "请检查麦克风权限和设备。"
+      }
+      
+      toast.error(message)
+      console.error("录音错误:", err)
+    }
+  }, [isRecording, startRecording])
+
+  const handleMicUp = useCallback(async () => {
+    if (!isRecording) return
+    try {
+      const audio = await stopRecording()
+      if (audio && canSend) {
+        sendMessage({
+          content: "[语音消息]",
+          attachments: [{
+            id: `audio-${Date.now()}`,
+            type: "audio/webm",
+            url: audio,
+            base64: audio,
+          } as ChatAttachment],
+        })
+      }
+    } catch (error) {
+      console.error("Failed to send voice message:", error)
+    }
+  }, [isRecording, stopRecording, canSend, sendMessage])
 
   const handleAddImages = () => {
     if (!canSend) return
@@ -181,6 +231,35 @@ export function ChatPage() {
   }
 
   const canSubmit = canSend && (Boolean(input.trim()) || attachments.length > 0)
+
+  // Keyboard shortcut: Alt+Space for voice recording
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === "Space") {
+        e.preventDefault()
+        if (!isRecording) {
+          handleMicDown()
+        }
+      }
+    }
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === "Space") {
+        e.preventDefault()
+        if (isRecording) {
+          handleMicUp()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+    }
+  }, [isRecording, handleMicDown, handleMicUp])
 
   return (
     <div className="bg-background/95 flex h-full flex-col">
@@ -276,6 +355,9 @@ export function ChatPage() {
         onInputChange={setInput}
         onAddImages={handleAddImages}
         onRemoveAttachment={handleRemoveAttachment}
+        onMicDown={handleMicDown}
+        onMicUp={handleMicUp}
+        isRecording={isRecording}
         onSend={handleSend}
         isConnected={isChatConnected}
         hasDefaultModel={Boolean(defaultModelName)}

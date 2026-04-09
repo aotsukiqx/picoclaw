@@ -118,9 +118,21 @@ func (h *Handler) handleGetPicoToken(w http.ResponseWriter, r *http.Request) {
 
 	wsURL := h.buildWsURL(r)
 
+
+	// Return combined token (same format as Gateway's overridePicoToken)
+	// Format: pico-<gateway_pid_token><config_pico_token>
+	gateway.mu.Lock()
+	var combinedToken string
+	if gateway.pidData != nil && cfg.Channels.Pico.Enabled {
+		combinedToken = "pico-" + gateway.pidData.Token + cfg.Channels.Pico.Token.String()
+	} else {
+		combinedToken = cfg.Channels.Pico.Token.String()
+	}
+	gateway.mu.Unlock()
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"token":   cfg.Channels.Pico.Token.String(),
+		"token":   combinedToken,
 		"ws_url":  wsURL,
 		"enabled": cfg.Channels.Pico.Enabled,
 	})

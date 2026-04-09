@@ -8,7 +8,7 @@ export interface UseVoiceOptions {
 
 export function useVoice(options: UseVoiceOptions) {
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingPath, setRecordingPath] = useState<string | null>(null);
+  const [_recordingPath, _setRecordingPath] = useState<string | null>(null); // recordingPath used for debug
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
